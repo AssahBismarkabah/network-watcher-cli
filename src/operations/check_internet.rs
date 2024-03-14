@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::calculate::Calculate;
+use crate::operations::calculate::Calculate;
 
 pub struct CheckInternet {
     url: String,
@@ -10,23 +10,19 @@ impl CheckInternet {
     pub fn new(url: String) -> Self {
         CheckInternet { url }
     }
-
-
 }
 
 #[async_trait]
 impl Calculate for CheckInternet {
     async fn calculate(&self) -> String {
-        let mut result = String::new();
         let response = reqwest::get(&self.url).await;
         match response {
             Ok(response) => {
-                result.push_str(&format!("{},{}", &self.url, response.status()));
+                format!("{},{}", &self.url, response.status().as_u16())
             }
             Err(e) => {
-                result.push_str(&format!("{},{}", &self.url, e));
+                format!("{},{}", &self.url, e)
             }
         }
-        result
     }
 }
