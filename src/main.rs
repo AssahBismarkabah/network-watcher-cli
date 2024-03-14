@@ -5,6 +5,7 @@ use crate::helper::save::save_to_file;
 use crate::operations::calculate;
 use crate::operations::check_internet::CheckInternet;
 use crate::operations::get_time::GetTime;
+use crate::operations::get_wifi_name::GetWifiName;
 use crate::option::Opt;
 
 mod option;
@@ -18,6 +19,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let operations: Vec<Box<dyn calculate::Calculate>> = vec![
         Box::new(GetTime::new()),
+        Box::new(GetWifiName::new()),
         Box::new(CheckInternet::new(opts.url)),
         // Add more operations here
     ];
