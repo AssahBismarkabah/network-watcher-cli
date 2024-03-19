@@ -9,26 +9,30 @@ use crate::operations::get_wifi_name::GetWifiName;
 use crate::option::Opt;
 
 mod option;
-
 mod helper;
 mod operations;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Parse command-line arguments
     let opts: Opt = Opt::parse();
 
+    // Create operations to collect network data
     let operations: Vec<Box<dyn calculate::Calculate>> = vec![
         Box::new(GetTime::new()),
         Box::new(GetWifiName::new()),
-        Box::new(CheckInternet::new(opts.url)),
+        Box::new(CheckInternet::new(opts.url.clone())), // Pass URL from command-line arguments
         // Add more operations here
     ];
 
-    // Apply all operations and save the results to a file
+    // Apply all operations and collect the results
     let results = apply_operations(operations).await;
 
     // Save the results to a file
-    save_to_file(opts.output, results).await?;
+    match save_to_file(opts.output.clone(), results).await {
+        Ok(_) => println!("Results saved successfully to {}", opts.output),
+        Err(err) => eprintln!("Failed to save results: {}", err),
+    }
 
     Ok(())
 }
