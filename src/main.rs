@@ -1,3 +1,4 @@
+use anyhow::Result;
 use clap::Parser;
 
 use crate::helper::calculate_apply::apply_operations;
@@ -13,7 +14,7 @@ mod helper;
 mod operations;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
     // Parse command-line arguments
     let opts: Opt = Opt::parse();
 

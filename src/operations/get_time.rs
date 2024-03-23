@@ -12,7 +12,7 @@ impl GetTime {
 
     pub fn get_time(&self) -> String {
         let now = Local::now();
-        now.format("%Y-%m-%d %H:%M:%S").to_string()
+        now.format("\"%Y-%m-%d\",\"%H:%M:%S\"").to_string()
     }
 }
 

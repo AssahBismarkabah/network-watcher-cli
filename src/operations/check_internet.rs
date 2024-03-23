@@ -16,13 +16,16 @@ impl CheckInternet {
 impl Calculate for CheckInternet {
     async fn calculate(&self) -> String {
         let response = reqwest::get(&self.url).await;
-        match response {
+        let status = match response {
             Ok(response) => {
-                format!("{},{}", &self.url, response.status().as_u16())
+                let binding = response.status();
+                binding.to_string()
             }
             Err(e) => {
-                format!("{},{}", &self.url, e)
+                let binding = e.status();
+                binding.map(|s| s.to_string()).unwrap_or_else(|| "-1".to_string())
             }
-        }
+        };
+        format!("\"{}\",\"{}\"", &self.url, status)
     }
 }

@@ -1,8 +1,11 @@
 use std::process::Command;
 
+use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 
 use crate::operations::calculate::Calculate;
+
+pub const MISSING_INFO: &str = "__";
 
 pub struct GetWifiName;
 
@@ -11,7 +14,12 @@ impl GetWifiName {
         GetWifiName {}
     }
 
-    pub async fn get_wifi_name(&self) -> String {
+    pub async fn get_wifi_name(&self) -> Result<String> {
+        let res = self.helper().await?;
+        Ok(format!("\"{}\"", res))
+    }
+
+    pub async fn helper(&self) -> Result<String> {
         if cfg!(target_os = "linux") {
             LinuxWifiInfoProvider.get_wifi_name().await
         } else if cfg!(target_os = "windows") {
@@ -27,39 +35,40 @@ impl GetWifiName {
 #[async_trait]
 impl Calculate for GetWifiName {
     async fn calculate(&self) -> String {
-        self.get_wifi_name().await
+        self.get_wifi_name()
+            .await.unwrap()
     }
 }
 
 // TODO What if the user is connected to multiple networks? What if the user is connected to a wired network?
 #[async_trait]
 trait WifiInfoProvider {
-    async fn get_wifi_name(&self) -> String;
+    async fn get_wifi_name(&self) -> Result<String>;
 }
 
 struct LinuxWifiInfoProvider;
 
 #[async_trait]
 impl WifiInfoProvider for LinuxWifiInfoProvider {
-    async fn get_wifi_name(&self) -> String {
-        let output = std::process::Command::new("iwconfig")
+    async fn get_wifi_name(&self) -> Result<String> {
+        let output = Command::new("iwconfig")
             .output()
-            .expect("Failed to execute iwconfig");
+            .with_context(|| "Failed to execute iwconfig")?;
 
         let output_str = match std::str::from_utf8(&output.stdout) {
             Ok(s) => s,
-            Err(_) => return "__".into(),
+            Err(_) => return Ok(MISSING_INFO.into()),
         };
 
         for line in output_str.lines() {
             if line.contains("ESSID") {
                 if let Some(name) = line.split_whitespace().nth(1) {
-                    return name.trim_matches('"').to_string();
+                    return Ok(name.trim_matches('"').to_string());
                 }
             }
         }
 
-        "__".into() // Return a default value
+        Ok(MISSING_INFO.into()) // Return a default value
     }
 }
 
@@ -67,9 +76,9 @@ struct WindowsWifiInfoProvider;
 
 #[async_trait]
 impl WifiInfoProvider for WindowsWifiInfoProvider {
-    async fn get_wifi_name(&self) -> String {
+    async fn get_wifi_name(&self) -> Result<String> {
         // Implement Windows-specific code here
-        unimplemented!("Windows implementation not provided");
+        bail!("Windows implementation not provided");
     }
 }
 
@@ -77,24 +86,24 @@ struct MacOSWifiInfoProvider;
 
 #[async_trait]
 impl WifiInfoProvider for MacOSWifiInfoProvider {
-    async fn get_wifi_name(&self) -> String {
+    async fn get_wifi_name(&self) -> Result<String> {
         let output = Command::new("/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport")
             .arg("-I")
             .output()
-            .expect("Failed to execute airport");
+            .with_context(|| "Failed to execute airport")?;
 
         let output_str = match String::from_utf8(output.stdout) {
             Ok(s) => s,
-            Err(_) => return "__".into(),
+            Err(_) => return Ok(MISSING_INFO.into()),
         };
 
         for line in output_str.lines() {
             if line.contains(" SSID: ") {
                 let ssid = line.split(':').nth(1).unwrap();
-                return ssid.trim().to_string();
+                return Ok(ssid.trim().to_string());
             }
         }
 
-        "__".into()
+        Ok(MISSING_INFO.into())
     }
 }
